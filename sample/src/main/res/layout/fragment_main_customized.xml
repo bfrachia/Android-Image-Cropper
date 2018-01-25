@@ -13,4 +13,5 @@
     app:cropGuidelines="on"
     app:cropGuidelinesColor="@android:color/holo_red_dark"
     app:cropInitialCropWindowPaddingRatio="0"
-    app:cropSnapRadius="0dp"/>
+    app:cropSnapRadius="0dp"
+    app:cropShape="custom"/>

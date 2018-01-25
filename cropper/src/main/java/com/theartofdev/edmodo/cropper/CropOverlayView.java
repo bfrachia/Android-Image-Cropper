@@ -15,12 +15,15 @@ package com.theartofdev.edmodo.cropper;
 import android.annotation.TargetApi;
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Region;
 import android.os.Build;
+import android.support.v4.graphics.PathParser;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -31,6 +34,22 @@ import java.util.Arrays;
 
 /** A custom View representing the crop window and the shaded background outside the crop window. */
 public class CropOverlayView extends View {
+
+  static float pathWidth = 0;
+  static float pathHeight = 0;
+
+  public void setOverlayPath(Path overlayPath) {
+    this.mPath = overlayPath;
+
+    RectF rectF = new RectF();
+    this.mPath.computeBounds(rectF, true);
+    pathWidth = rectF.width();
+    pathHeight = rectF.height();
+
+    setCropShape(CropImageView.CropShape.CUSTOM);
+
+    setFixedAspectRatio(true);
+  }
 
   // region: Fields and Consts
 
@@ -204,8 +223,8 @@ public class CropOverlayView extends View {
   public void setCropShape(CropImageView.CropShape cropShape) {
     if (mCropShape != cropShape) {
       mCropShape = cropShape;
-        if (Build.VERSION.SDK_INT <= 17) {
-        if (mCropShape == CropImageView.CropShape.OVAL) {
+      if (Build.VERSION.SDK_INT <= 17) {
+        if (mCropShape == CropImageView.CropShape.OVAL || mCropShape == CropImageView.CropShape.CUSTOM) {
           mOriginalLayerType = getLayerType();
           if (mOriginalLayerType != View.LAYER_TYPE_SOFTWARE) {
             // TURN off hardware acceleration
@@ -388,13 +407,13 @@ public class CropOverlayView extends View {
 
     mCropWindowHandler.setInitialAttributeValues(options);
 
+    setFixedAspectRatio(options.fixAspectRatio);
+
     setCropShape(options.cropShape);
 
     setSnapRadius(options.snapRadius);
 
     setGuidelines(options.guidelines);
-
-    setFixedAspectRatio(options.fixAspectRatio);
 
     setAspectRatioX(options.aspectRatioX);
 
@@ -623,7 +642,7 @@ public class CropOverlayView extends View {
         canvas.drawRect(left, top, right, bottom, mBackgroundPaint);
         canvas.restore();
       }
-    } else {
+    } else if (mCropShape == CropImageView.CropShape.OVAL){
       mPath.reset();
         if (Build.VERSION.SDK_INT <= 17 && mCropShape == CropImageView.CropShape.OVAL) {
         mDrawRect.set(rect.left + 2, rect.top + 2, rect.right - 2, rect.bottom - 2);
@@ -635,6 +654,45 @@ public class CropOverlayView extends View {
       canvas.clipPath(mPath, Region.Op.XOR);
       canvas.drawRect(left, top, right, bottom, mBackgroundPaint);
       canvas.restore();
+    }
+    else {
+//      mPath.reset();
+
+      if (pathWidth != 0 && pathHeight != 0){
+
+        Matrix scaleMatrix = new Matrix();
+        float widthScale = rect.width() / pathWidth;
+        float heightScale = rect.height() / pathHeight;
+
+        float scale = Math.min(widthScale, heightScale);
+
+        pathWidth = pathWidth * scale;
+        pathHeight = pathHeight * scale;
+
+        scaleMatrix.setScale(scale, scale, rect.centerX(), rect.centerY());
+        mPath.transform(scaleMatrix);
+      }
+//        canvas.drawPath(mPath, mBorderPaint);
+
+      if (Build.VERSION.SDK_INT <= 17 && mCropShape == CropImageView.CropShape.CUSTOM) {
+        mDrawRect.set(rect.left + 2, rect.top + 2, rect.right - 2, rect.bottom - 2);
+      } else {
+        mDrawRect.set(rect.left, rect.top, rect.right, rect.bottom);
+      }
+
+      RectF rectF = new RectF();
+      this.mPath.computeBounds(rectF, true);
+
+      Paint paint = new Paint();
+      paint.setStyle(Paint.Style.FILL);
+      paint.setColor(Color.TRANSPARENT);
+      mPath.offset(mDrawRect.centerX() - rectF.centerX(), mDrawRect.centerY() - rectF.centerY());
+      canvas.drawPath(mPath, paint);
+      canvas.save();
+      canvas.clipPath(mPath, Region.Op.DIFFERENCE);
+      canvas.drawRect(left, top, right, bottom, mBackgroundPaint);
+      canvas.restore();
+
     }
   }
 
@@ -696,9 +754,28 @@ public class CropOverlayView extends View {
       if (mCropShape == CropImageView.CropShape.RECTANGLE) {
         // Draw rectangle crop window border.
         canvas.drawRect(rect, mBorderPaint);
-      } else {
+      } else if (mCropShape == CropImageView.CropShape.OVAL) {
         // Draw circular crop window border
         canvas.drawOval(rect, mBorderPaint);
+      }
+      else {
+        Matrix scaleMatrix = new Matrix();
+
+        if (pathWidth != 0 && pathHeight != 0){
+
+          float widthScale = rect.width() / pathWidth;
+          float heightScale = rect.height() / pathHeight;
+
+          float scale = Math.min(widthScale, heightScale);
+
+          pathWidth = pathWidth * scale;
+          pathHeight = pathHeight * scale;
+
+          scaleMatrix.setScale(scale, scale, rect.centerX(), rect.centerY());
+          mPath.transform(scaleMatrix);
+
+        }
+        canvas.drawPath(mPath, mBorderPaint);
       }
     }
   }
