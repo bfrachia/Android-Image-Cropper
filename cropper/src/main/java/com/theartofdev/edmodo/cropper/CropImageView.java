@@ -19,6 +19,7 @@ import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
+import android.graphics.Path;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.net.Uri;
@@ -26,6 +27,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.support.media.ExifInterface;
+import android.support.v4.graphics.PathParser;
 import android.util.AttributeSet;
 import android.util.Pair;
 import android.view.LayoutInflater;
@@ -1827,7 +1829,8 @@ public class CropImageView extends FrameLayout {
    */
   public enum CropShape {
     RECTANGLE,
-    OVAL
+    OVAL,
+    CUSTOM
   }
   // endregion
 
@@ -2132,4 +2135,8 @@ public class CropImageView extends FrameLayout {
     }
   }
   // endregion
+
+  public void setCropPath(Path path) {
+    mCropOverlayView.setOverlayPath(path);
+  }
 }
